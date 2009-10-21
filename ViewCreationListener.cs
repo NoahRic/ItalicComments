@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel.Composition;
-using System.Windows.Media;
 using System.Linq;
-using Microsoft.VisualStudio.Text.Classification;
-using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.ApplicationModel.Environments;
 using System.Windows;
+using System.Windows.Media;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Utilities;
 
 namespace ItalicComments
 {
@@ -15,15 +14,15 @@ namespace ItalicComments
     internal sealed class ViewCreationListener : IWpfTextViewCreationListener
     {
         [Import]
-        internal IClassificationFormatMapService formatMapService;
+        IClassificationFormatMapService formatMapService = null;
 
         [Import]
-        internal IClassificationTypeRegistryService classificationTypeService;
+        IClassificationTypeRegistryService classificationTypeService = null;
 
         /// <summary>
         /// When a text view is created, make all comments italicized.
         /// </summary>
-        public void TextViewCreated(IWpfTextView textView, IEnvironment context)
+        public void TextViewCreated(IWpfTextView textView)
         {
             new FormatMapWatcher(formatMapService.GetClassificationFormatMap(textView),
                                  classificationTypeService.GetClassificationType("text"));
