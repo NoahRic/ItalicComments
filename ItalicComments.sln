@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ItalicComments", "ItalicComments.csproj", "{48CC2350-85C6-4ED6-9706-1CA388509FEA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48CC2350-85C6-4ED6-9706-1CA388509FEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48CC2350-85C6-4ED6-9706-1CA388509FEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48CC2350-85C6-4ED6-9706-1CA388509FEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48CC2350-85C6-4ED6-9706-1CA388509FEA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -5,6 +5,7 @@ using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
+using System;
 
 namespace ItalicComments
 {
@@ -30,7 +31,7 @@ namespace ItalicComments
     }
 
     internal sealed class FormatMapWatcher
-    {
+    { //{it}
         bool inUpdate = false;
         IClassificationFormatMap formatMap;
         IClassificationType text;
