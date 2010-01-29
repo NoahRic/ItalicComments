@@ -6,6 +6,8 @@ using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
+using System;
+using System.Diagnostics;
 
 namespace ItalicComments
 {
@@ -25,7 +27,7 @@ namespace ItalicComments
         /// </summary>
         public void TextViewCreated(IWpfTextView textView)
         {
-            new FormatMapWatcher(formatMapService.GetClassificationFormatMap(textView), typeRegistry);
+            new FormatMapWatcher(textView, formatMapService.GetClassificationFormatMap(textView), typeRegistry);
         }
     }
 
@@ -36,10 +38,10 @@ namespace ItalicComments
         IClassificationTypeRegistryService typeRegistry;
         IClassificationType text;
 
-        static List<string> CommentTypes = new List<string>() { "comment", "xml doc comment" };
-        static List<string> DocTagTypes = new List<string>() { "xml doc tag" };
+        static List<string> CommentTypes = new List<string>() { "comment", "xml doc comment", "vb xml doc comment" };
+        static List<string> DocTagTypes = new List<string>() { "xml doc tag", "vb xml doc tag" };
 
-        public FormatMapWatcher(IClassificationFormatMap formatMap, IClassificationTypeRegistryService typeRegistry)
+        public FormatMapWatcher(ITextView view, IClassificationFormatMap formatMap, IClassificationTypeRegistryService typeRegistry)
         {
             this.formatMap = formatMap;
             this.text = typeRegistry.GetClassificationType("text");
@@ -47,6 +49,20 @@ namespace ItalicComments
             this.FixComments();
 
             this.formatMap.ClassificationFormatMappingChanged += FormatMapChanged;
+
+            // Bug workaround for Beta 2:
+            // The format map doesn't sent out changed events when items are *added* to the map, which includes language specific items
+            // like the ones we want (xml doc comment, for example).  As such, do an extra format when the view first gains focus.
+            view.GotAggregateFocus += FirstGotFocus;
+        }
+
+        void FirstGotFocus(object sender, EventArgs e)
+        {
+            ((ITextView)sender).GotAggregateFocus -= FirstGotFocus;
+
+            Debug.Assert(!inUpdate, "How can we be updating *while* the view is getting focus?");
+
+            this.FixComments();
         }
 
         void FormatMapChanged(object sender, System.EventArgs e)
