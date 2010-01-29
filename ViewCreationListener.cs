@@ -6,6 +6,8 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System;
+using Microsoft.VisualStudio.Language.StandardClassification;
+using System.Collections.Generic;
 
 namespace ItalicComments
 {
@@ -18,28 +20,32 @@ namespace ItalicComments
         IClassificationFormatMapService formatMapService = null;
 
         [Import]
-        IClassificationTypeRegistryService classificationTypeService = null;
+        IClassificationTypeRegistryService typeRegistry = null;
 
         /// <summary>
         /// When a text view is created, make all comments italicized.
         /// </summary>
         public void TextViewCreated(IWpfTextView textView)
         {
-            new FormatMapWatcher(formatMapService.GetClassificationFormatMap(textView),
-                                 classificationTypeService.GetClassificationType("text"));
+            new FormatMapWatcher(formatMapService.GetClassificationFormatMap(textView), typeRegistry);
         }
     }
 
     internal sealed class FormatMapWatcher
-    { //{it}
+    {
         bool inUpdate = false;
         IClassificationFormatMap formatMap;
+        IClassificationTypeRegistryService typeRegistry;
         IClassificationType text;
 
-        public FormatMapWatcher(IClassificationFormatMap formatMap, IClassificationType text)
+        static List<string> CommentTypes = new List<string>() { "comment", "xml doc comment" };
+        static List<string> DocTagTypes = new List<string>() { "xml doc tag" };
+
+        public FormatMapWatcher(IClassificationFormatMap formatMap, IClassificationTypeRegistryService typeRegistry)
         {
             this.formatMap = formatMap;
-            this.text = text;
+            this.text = typeRegistry.GetClassificationType("text");
+            this.typeRegistry = typeRegistry;
             this.FixComments();
 
             this.formatMap.ClassificationFormatMappingChanged += FormatMapChanged;
@@ -57,46 +63,36 @@ namespace ItalicComments
             {
                 inUpdate = true;
 
-                var textFormat = formatMap.GetTextProperties(text);
+                // First, go through the ones we know about:
 
-                // Looks like some of these can be null; be sure to skip those
+                // 1) Known comment types are italicized
+                foreach (var type in CommentTypes.Select(t => typeRegistry.GetClassificationType(t))
+                                                 .Where(t => t != null))
+                {
+                    Italicize(type);
+                }
+
+                // 2) Known doc tags
+                foreach (var type in DocTagTypes.Select(t => typeRegistry.GetClassificationType(t))
+                                                .Where(t => t != null))
+                {
+                    Fade(type);
+                }
+
+                // 3) Grab everything else that looks like a comment or doc tag
                 foreach (var classification in formatMap.CurrentPriorityOrder.Where(c => c != null))
                 {
-                    // This won't catch, for example, "XML Doc Tag".  If you want all XML doc comments
-                    // to be italicized, include whatever else you want.
-                    if (classification.Classification.ToLower().Contains("comment"))
+                    string name = classification.Classification.ToLowerInvariant();
+                    if (CommentTypes.Contains(name) || DocTagTypes.Contains(name))
+                        continue;
+                    
+                    if (name.Contains("comment"))
                     {
-                        var properties = formatMap.GetTextProperties(classification);
-                        var typeface = properties.Typeface;
-
-                        // Add italic and (possibly) remove bold, and change to a font that has good looking
-                        // italics (i.e. *not* consolas)
-                        var newTypeface = new Typeface(new FontFamily("Lucida Sans"), FontStyles.Italic, FontWeights.Normal, typeface.Stretch);
-                        properties = properties.SetTypeface(newTypeface);
-
-                        // Also, make the font size a little bit smaller than the normal text size
-                        properties = properties.SetFontRenderingEmSize(textFormat.FontRenderingEmSize - 1);
-
-                        // And put it back in the format map
-                        formatMap.SetTextProperties(classification, properties);
+                        Italicize(classification);
                     }
-                    // Make doc tags slightly less transparent, so they fade into the background a bit.
-                    // This doesn't effect strings inside tags, like the names of params, so it gives the
-                    // added effect that those strings look slightly bold.
-                    else if (classification.Classification.ToLower().Contains("doc tag"))
+                    else if (name.Contains("doc tag"))
                     {
-                        var properties = formatMap.GetTextProperties(classification);
-                        var brush = properties.ForegroundBrush as SolidColorBrush;
-
-                        // Make the font size a little bit smaller than the normal text size
-                        properties = properties.SetFontRenderingEmSize(textFormat.FontRenderingEmSize - 1);
-
-                        // Only do this for SolidColorBrushes, though
-                        if (brush != null)
-                        {
-                            formatMap.SetTextProperties(classification,
-                                properties.SetForegroundBrush(new SolidColorBrush(brush.Color) { Opacity = 0.7 }));
-                        }
+                        Fade(classification);   
                     }
                 }
             }
@@ -104,6 +100,40 @@ namespace ItalicComments
             {
                 inUpdate = false;
             } 
+        }
+
+        void Italicize(IClassificationType classification)
+        {
+            var textFormat = formatMap.GetTextProperties(text);
+            var properties = formatMap.GetTextProperties(classification);
+            var typeface = properties.Typeface;
+
+            // Add italic and (possibly) remove bold, and change to a font that has good looking
+            // italics (i.e. *not* consolas)
+            var newTypeface = new Typeface(new FontFamily("Lucida Sans"), FontStyles.Italic, FontWeights.Normal, typeface.Stretch);
+            properties = properties.SetTypeface(newTypeface);
+
+            // Also, make the font size a little bit smaller than the normal text size
+            properties = properties.SetFontRenderingEmSize(textFormat.FontRenderingEmSize - 1);
+
+            // And put it back in the format map
+            formatMap.SetTextProperties(classification, properties);
+        }
+
+        void Fade(IClassificationType classification)
+        {
+            var textFormat = formatMap.GetTextProperties(text);
+            var properties = formatMap.GetTextProperties(classification);
+
+            // Make the font size a little bit smaller than the normal text size
+            properties = properties.SetFontRenderingEmSize(textFormat.FontRenderingEmSize - 1);
+
+            // Set the opacity to be a bit lighter (if it isn't already set)
+            var brush = properties.ForegroundBrush as SolidColorBrush;
+            if (brush != null && brush.Opacity == 1.0)
+                properties = properties.SetForegroundBrush(new SolidColorBrush(brush.Color) { Opacity = 0.7 });
+
+            formatMap.SetTextProperties(classification, properties);
         }
     }
 }
