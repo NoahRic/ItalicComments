@@ -51,12 +51,9 @@ namespace ItalicComments
 
             this.formatMap.ClassificationFormatMappingChanged += FormatMapChanged;
 
-            // Bug workaround for Beta 2:
-            // The format map doesn't sent out changed events when items are *added* to the map, which includes language specific items
-            // like the ones we want (xml doc comment, for example).  As such, do an extra format when the view first gains focus.
             view.GotAggregateFocus += FirstGotFocus;
         }
-
+ 
         void FirstGotFocus(object sender, EventArgs e)
         {
             ((ITextView)sender).GotAggregateFocus -= FirstGotFocus;
